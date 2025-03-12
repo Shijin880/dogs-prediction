@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dog Prediction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 30px;
+        }
+        .code-block {
+            background-color: #f5f5f5;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 3px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .upload-area {
+            border: 2px dashed #3498db;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .result-section {
+            margin-top: 30px;
+            display: none;
+        }
+        .prediction-box {
+            background-color: #e8f4fc;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .prediction-item {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        .dog-result {
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 15px;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            margin: 20px auto;
+            display: block;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dog Breed Prediction with TensorFlow</h1>
+    
+    <div class="upload-area">
+        <h2>Upload Your Dog Image</h2>
+        <p>Select a dog image to analyze with our pre-trained VGG16 model</p>
+        <p>(Note: This is a demo page - the actual prediction would require a backend server with TensorFlow)</p>
+        <input type="file" id="imageUpload" accept="image/*">
+        <div>
+            <button class="button" id="predictButton">Predict Breed</button>
+        </div>
+        <img id="preview" class="preview-image" style="display: none;">
+    </div>
+    
+    <div class="result-section" id="resultSection">
+        <h2>Prediction Results</h2>
+        <div class="prediction-box">
+            <div class="prediction-item" id="prediction1">1: Loading... (0.00%)</div>
+            <div class="prediction-item" id="prediction2">2: Loading... (0.00%)</div>
+            <div class="prediction-item" id="prediction3">3: Loading... (0.00%)</div>
+            <div class="prediction-item" id="prediction4">4: Loading... (0.00%)</div>
+            <div class="prediction-item" id="prediction5">5: Loading... (0.00%)</div>
+            <div class="dog-result" id="isDog">Is this a dog? Loading...</div>
+        </div>
+    </div>
+    
+    <h2>How It Works</h2>
+    <p>This application uses a pre-trained VGG16 Convolutional Neural Network to predict dog breeds. The model was trained on the ImageNet dataset which includes 1000 different categories, many of which are dog breeds.</p>
+    
+    <h2>Python Code</h2>
+    <p>Here's the Python code that powers this prediction:</p>
+    
+    <div class="code-block">
+# Install required packages<br>
+!pip install google-colab<br>
+<br>
+# Import necessary libraries<br>
+from google.colab import files<br>
+import tensorflow as tf<br>
+from tensorflow.keras.preprocessing.image import load_img, img_to_array, ImageDataGenerator<br>
+from tensorflow.keras.applications import VGG16<br>
+from tensorflow.keras.models import Model<br>
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout<br>
+from tensorflow.keras.optimizers import Adam<br>
+import numpy as np<br>
+import matplotlib.pyplot as plt<br>
+<br>
+# Define image dimensions - standard for many pre-trained models<br>
+img_width, img_height = 224, 224<br>
+<br>
+def create_model():<br>
+    # Load pre-trained VGG16 model without the top classification layer<br>
+    base_model = VGG16(weights='imagenet', include_top=False, <br>
+                      input_shape=(img_width, img_height, 3))<br>
+    <br>
+    # Freeze the base model layers<br>
+    for layer in base_model.layers:<br>
+        layer.trainable = False<br>
+    <br>
+    # Add custom classification layers using tf.keras.layers<br>
+    x = base_model.output<br>
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)<br>
+    x = tf.keras.layers.Dense(512, activation='relu')(x)<br>
+    x = tf.keras.layers.Dropout(0.5)(x)<br>
+    predictions = tf.keras.layers.Dense(2, activation='softmax')(x)  # 2 classes: dog or not dog<br>
+    <br>
+    # Create the final model<br>
+    model = tf.keras.models.Model(inputs=base_model.input, outputs=predictions)<br>
+    <br>
+    # Compile the model<br>
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),<br>
+                  loss='categorical_crossentropy',<br>
+                  metrics=['accuracy'])<br>
+    <br>
+    return model<br>
+<br>
+def load_pretrained_and_predict(img_path):<br>
+    # Load VGG16 for feature extraction<br>
+    base_model = tf.keras.applications.VGG16(weights='imagenet', include_top=True)<br>
+    <br>
+    # Load and preprocess the image<br>
+    img = load_img(img_path, target_size=(224, 224))<br>
+    img_array = img_to_array(img)<br>
+    img_array = np.expand_dims(img_array, axis=0)<br>
+    img_array = tf.keras.applications.vgg16.preprocess_input(img_array)<br>
+    <br>
+    # Predict with the pre-trained model<br>
+    predictions = base_model.predict(img_array)<br>
+    decoded_predictions = tf.keras.applications.vgg16.decode_predictions(predictions, top=5)[0]<br>
+    <br>
+    # Check if any predictions contain 'dog'<br>
+    is_dog = any(imagenet_id.startswith('n02') for imagenet_id, _, _ in decoded_predictions)<br>
+    <br>
+    # Print results<br>
+    print("Top 5 predictions:")<br>
+    for i, (imagenet_id, label, score) in enumerate(decoded_predictions):<br>
+        print(f"{i+1}: {label} ({score*100:.2f}%)")<br>
+    <br>
+    print(f"\nIs this a dog? {'Yes' if is_dog else 'No'}")<br>
+    <br>
+    return is_dog, decoded_predictions<br>
+<br>
+# Usage example<br>
+if __name__ == "__main__":<br>
+    # For quick demonstration with pre-trained model:<br>
+    uploaded = files.upload()  # This will prompt the user to upload a file<br>
+    for fn in uploaded.keys():<br>
+        img_path = fn  # Path to your uploaded image<br>
+    is_dog, predictions = load_pretrained_and_predict(img_path)
+    </div>
+    
+    <script>
+        // JavaScript for the demo functionality
+        document.getElementById('imageUpload').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('preview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        document.getElementById('predictButton').addEventListener('click', function() {
+            if (!document.getElementById('preview').src) {
+                alert('Please upload an image first');
+                return;
+            }
+            
+            // Show results section
+            document.getElementById('resultSection').style.display = 'block';
+            
+            // Simulate prediction (in a real app, this would call a backend API)
+            setTimeout(function() {
+                // Example dog predictions
+                const predictions = [
+                    { label: 'Airedale', score: 83.01 },
+                    { label: 'Lakeland_terrier', score: 6.59 },
+                    { label: 'Border_terrier', score: 2.46 },
+                    { label: 'wire-haired_fox_terrier', score: 1.42 },
+                    { label: 'otterhound', score: 0.94 }
+                ];
+                
+                // Update the UI with predictions
+                for (let i = 0; i < predictions.length; i++) {
+                    document.getElementById(`prediction${i+1}`).textContent = 
+                        `${i+1}: ${predictions[i].label} (${predictions[i].score.toFixed(2)}%)`;
+                }
+                
+                document.getElementById('isDog').textContent = 'Is this a dog? Yes';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
